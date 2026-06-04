@@ -12,7 +12,7 @@ SLEEP_SECONDS = float(os.getenv("SLEEP_SECONDS", "1.5"))
 
 # Vul hier je 3 feeds in
 FEEDS = [
-    {"redfox": "https://bsky.app/profile/did:plc:jaka644beit3x4vmmg6yysw7/feed/aaae6jfc5w2oi", "url": "", "allow_replies": True},
+    {"name": "feed1", "https://bsky.app/profile/did:plc:jaka644beit3x4vmmg6yysw7/feed/aaae6jfc5w2oi": "", "allow_replies": True},
     {"name": "feed2", "url": "", "allow_replies": True},
     {"name": "feed3", "url": "", "allow_replies": True},
 ]
@@ -26,8 +26,8 @@ LISTS = [
 
 # Hashtags + exclude lijsten. Leeg = skip
 HASHTAGS = [
-    {"tag": "", "exclude_list": ""},
-    {"tag": "", "exclude_list": ""},
+    {"tag": "#eyescandy", "exclude_list": ""},
+    {"tag": "#bskypromo", "exclude_list": "https://bsky.app/profile/did:plc:cxrt7ggxkamgzxa47cggtees/lists/3mkl4yhuimg2b"},
     {"tag": "", "exclude_list": ""},
 ]
 
