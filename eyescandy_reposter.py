@@ -23,8 +23,8 @@ FEEDS = [
 
 LISTS = [
     {"name": "eigen", "url": "https://bsky.app/profile/did:plc:sp54ouue6fp2dlvn2cux54ka/lists/3mnib6r6cwk2q"},
-    {"name": "list2", "url": ""},
-    {"name": "list3", "url": ""},
+    {"name": "photos 1", "url": "https://bsky.app/profile/did:plc:zmyydkc2zzznc4smjufuerlx/lists/3mhs2xmxmos2l"},
+    {"name": "photo2", "url": "https://bsky.app/profile/did:plc:zmyydkc2zzznc4smjufuerlx/lists/3mhs2vtwixg2q"},
 ]
 
 HASHTAGS = [
