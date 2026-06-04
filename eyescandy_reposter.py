@@ -98,9 +98,15 @@ def repost_and_like(client, post, state, per_user):
 
 
 def get_feed_posts(client, feed_url):
-    handle = get_handle(feed_url)
-    rkey = get_rkey(feed_url)
-    did = client.com.atproto.identity.resolve_handle({"handle": handle}).did
+    parts = feed_url.rstrip("/").split("/")
+    actor = parts[parts.index("profile") + 1]
+    rkey = parts[-1]
+
+    if actor.startswith("did:"):
+        did = actor
+    else:
+        did = client.com.atproto.identity.resolve_handle({"handle": actor}).did
+
     feed_uri = f"at://{did}/app.bsky.feed.generator/{rkey}"
     data = client.app.bsky.feed.get_feed({"feed": feed_uri, "limit": 100})
     return [item.post for item in data.feed]
