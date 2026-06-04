@@ -27,7 +27,7 @@ LISTS = [
 # Hashtags + exclude lijsten. Leeg = skip
 HASHTAGS = [
     {"tag": "#eyescandy", "exclude_list": ""},
-    {"tag": "#bskypromo", "exclude_list": "https://bsky.app/profile/did:plc:cxrt7ggxkamgzxa47cggtees/lists/3mkl4yhuimg2b"},
+    {"tag": "", "exclude_list": ""},
     {"tag": "", "exclude_list": ""},
 ]
 
