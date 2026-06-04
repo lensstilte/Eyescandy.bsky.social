@@ -1,5 +1,6 @@
 import os, json, time
 from collections import defaultdict
+from datetime import datetime, timezone, timedelta
 from atproto import Client
 
 USERNAME = os.getenv("BSKY_USERNAME")
@@ -9,26 +10,32 @@ STATE_FILE = os.getenv("STATE_FILE", "state_eyescandy.json")
 MAX_PER_RUN = int(os.getenv("MAX_PER_RUN", "100"))
 MAX_PER_USER = int(os.getenv("MAX_PER_USER", "3"))
 SLEEP_SECONDS = float(os.getenv("SLEEP_SECONDS", "1.5"))
+HOURS_BACK = int(os.getenv("HOURS_BACK", "3"))
 
-# Vul hier je 3 feeds in
+OWN_REPOST_SLOTS = 2
+OTHER_REPOST_LIMIT = MAX_PER_RUN - OWN_REPOST_SLOTS
+
 FEEDS = [
     {"name": "feed1", "url": "https://bsky.app/profile/did:plc:jaka644beit3x4vmmg6yysw7/feed/aaae6jfc5w2oi", "allow_replies": True},
     {"name": "feed2", "url": "", "allow_replies": True},
     {"name": "feed3", "url": "", "allow_replies": True},
 ]
 
-# Vul hier je 3 lijsten in
 LISTS = [
     {"name": "list1", "url": ""},
     {"name": "list2", "url": ""},
     {"name": "list3", "url": ""},
 ]
 
-# Hashtags + exclude lijsten. Leeg = skip
 HASHTAGS = [
     {"tag": "#eyescandy", "exclude_list": "https://bsky.app/profile/did:plc:sp54ouue6fp2dlvn2cux54ka/lists/3mnianivya72q"},
     {"tag": "#bskypromo", "exclude_list": "https://bsky.app/profile/did:plc:sp54ouue6fp2dlvn2cux54ka/lists/3mniamoz32f2n"},
     {"tag": "", "exclude_list": ""},
+]
+
+GLOBAL_EXCLUDE_LISTS = [
+    "https://bsky.app/profile/did:plc:sp54ouue6fp2dlvn2cux54ka/lists/3mnianivya72q",
+    "https://bsky.app/profile/did:plc:sp54ouue6fp2dlvn2cux54ka/lists/3mniamoz32f2n",
 ]
 
 
@@ -49,22 +56,36 @@ def get_rkey(url):
     return url.rstrip("/").split("/")[-1]
 
 
-def get_handle(url):
+def get_actor_from_url(url):
     parts = url.rstrip("/").split("/")
-    if "profile" in parts:
-        return parts[parts.index("profile") + 1]
-    return ""
+    return parts[parts.index("profile") + 1]
 
 
-def is_reply(post):
-    return bool(getattr(post.record, "reply", None))
+def resolve_actor(client, actor):
+    if actor.startswith("did:"):
+        return actor
+    return client.com.atproto.identity.resolve_handle({"handle": actor}).did
 
 
 def has_media(post):
     embed = getattr(post.record, "embed", None)
     if not embed:
         return False
-    return "images" in str(embed).lower() or "video" in str(embed).lower()
+    text = str(embed).lower()
+    return "images" in text or "video" in text
+
+
+def is_reply(post):
+    return bool(getattr(post.record, "reply", None))
+
+
+def is_recent(post):
+    try:
+        created = datetime.fromisoformat(post.record.created_at.replace("Z", "+00:00"))
+        cutoff = datetime.now(timezone.utc) - timedelta(hours=HOURS_BACK)
+        return created >= cutoff
+    except Exception:
+        return False
 
 
 def repost_and_like(client, post, state, per_user):
@@ -89,7 +110,7 @@ def repost_and_like(client, post, state, per_user):
         client.repost(uri, cid)
         state["reposted"].append(uri)
         per_user[author] += 1
-        print(f"Reposted: {uri}")
+        print(f"Reposted: {post.author.handle} - {uri}")
         time.sleep(SLEEP_SECONDS)
         return True
     except Exception as e:
@@ -98,24 +119,18 @@ def repost_and_like(client, post, state, per_user):
 
 
 def get_feed_posts(client, feed_url):
-    parts = feed_url.rstrip("/").split("/")
-    actor = parts[parts.index("profile") + 1]
-    rkey = parts[-1]
-
-    if actor.startswith("did:"):
-        did = actor
-    else:
-        did = client.com.atproto.identity.resolve_handle({"handle": actor}).did
-
+    actor = get_actor_from_url(feed_url)
+    rkey = get_rkey(feed_url)
+    did = resolve_actor(client, actor)
     feed_uri = f"at://{did}/app.bsky.feed.generator/{rkey}"
     data = client.app.bsky.feed.get_feed({"feed": feed_uri, "limit": 100})
     return [item.post for item in data.feed]
 
 
 def get_list_members(client, list_url):
-    handle = get_handle(list_url)
+    actor = get_actor_from_url(list_url)
     rkey = get_rkey(list_url)
-    did = client.com.atproto.identity.resolve_handle({"handle": handle}).did
+    did = resolve_actor(client, actor)
     list_uri = f"at://{did}/app.bsky.graph.list/{rkey}"
 
     members = []
@@ -165,11 +180,79 @@ def get_excluded_dids(client, list_url):
 
 
 def get_hashtag_posts(client, tag):
-    if not tag.strip():
+    tag = tag.strip()
+    if not tag:
         return []
-    q = tag if tag.startswith("#") else f"#{tag}"
-    data = client.app.bsky.feed.search_posts({"q": q, "limit": 100})
-    return data.posts
+
+    clean_tag = tag.replace("#", "").strip().lower()
+    query = f"#{clean_tag}"
+
+    data = client.app.bsky.feed.search_posts({
+        "q": query,
+        "limit": 100,
+        "sort": "latest"
+    })
+
+    posts = []
+
+    for post in data.posts:
+        text = getattr(post.record, "text", "") or ""
+        if f"#{clean_tag}" not in text.lower():
+            continue
+        posts.append(post)
+
+    return posts
+
+
+def repost_own_latest_media(client):
+    print("Scanning own latest media posts")
+
+    try:
+        my_did = client.me.did
+
+        data = client.app.bsky.feed.get_author_feed({
+            "actor": my_did,
+            "limit": 50,
+            "filter": "posts_no_replies"
+        })
+
+        own_media = []
+
+        for item in data.feed:
+            post = item.post
+
+            if post.author.did != my_did:
+                continue
+            if not has_media(post):
+                continue
+
+            own_media.append(post)
+
+            if len(own_media) >= OWN_REPOST_SLOTS:
+                break
+
+        for post in reversed(own_media):
+            try:
+                viewer = getattr(post, "viewer", None)
+                old_repost = getattr(viewer, "repost", None) if viewer else None
+
+                if old_repost:
+                    try:
+                        client.delete_repost(old_repost)
+                        print(f"Deleted old own repost: {post.uri}")
+                        time.sleep(SLEEP_SECONDS)
+                    except Exception as e:
+                        print(f"Delete own repost skipped/error: {e}")
+
+                client.repost(post.uri, post.cid)
+                print(f"Own post reposted last: {post.uri}")
+                time.sleep(SLEEP_SECONDS)
+
+            except Exception as e:
+                print(f"Own repost error: {e}")
+
+    except Exception as e:
+        print(f"Own media scan error: {e}")
 
 
 def main():
@@ -182,61 +265,98 @@ def main():
     per_user = defaultdict(int)
     total = 0
 
-    # Feeds
-    for feed in FEEDS:
-        if total >= MAX_PER_RUN:
+    excluded_global = set()
+    for exclude_url in GLOBAL_EXCLUDE_LISTS:
+        if exclude_url.strip():
+            excluded_global.update(get_excluded_dids(client, exclude_url))
+
+    print(f"Global excluded accounts: {len(excluded_global)}")
+
+    PROCESS_ORDER = [
+        ("hashtag", HASHTAGS[0]),
+        ("hashtag", HASHTAGS[1]),
+        ("hashtag", HASHTAGS[2]),
+
+        ("feed", FEEDS[2]),
+        ("list", LISTS[2]),
+
+        ("feed", FEEDS[1]),
+        ("list", LISTS[1]),
+
+        ("feed", FEEDS[0]),
+        ("list", LISTS[0]),
+    ]
+
+    for source_type, source in PROCESS_ORDER:
+        if total >= OTHER_REPOST_LIMIT:
             break
-        if not feed["url"].strip():
-            continue
 
-        print(f"Scanning feed: {feed['name']}")
-
-        for post in get_feed_posts(client, feed["url"]):
-            if total >= MAX_PER_RUN:
-                break
-            if is_reply(post) and not feed.get("allow_replies", True):
+        if source_type == "hashtag":
+            tag = source["tag"].strip()
+            if not tag:
                 continue
-            if repost_and_like(client, post, state, per_user):
-                total += 1
-                save_state(state)
 
-    # Lists
-    for lst in LISTS:
-        if total >= MAX_PER_RUN:
-            break
-        if not lst["url"].strip():
-            continue
+            excluded = get_excluded_dids(client, source.get("exclude_list", ""))
 
-        print(f"Scanning list: {lst['name']}")
+            print(f"Scanning hashtag: {tag}")
 
-        for post in get_list_posts(client, lst["url"]):
-            if total >= MAX_PER_RUN:
-                break
-            if repost_and_like(client, post, state, per_user):
-                total += 1
-                save_state(state)
+            for post in get_hashtag_posts(client, tag):
+                if total >= OTHER_REPOST_LIMIT:
+                    break
+                if post.author.did in excluded_global:
+                    continue
+                if post.author.did in excluded:
+                    continue
+                if not is_recent(post):
+                    continue
 
-    # Hashtags
-    for item in HASHTAGS:
-        if total >= MAX_PER_RUN:
-            break
-        tag = item["tag"].strip()
-        if not tag:
-            continue
+                if repost_and_like(client, post, state, per_user):
+                    total += 1
+                    save_state(state)
 
-        excluded = get_excluded_dids(client, item.get("exclude_list", ""))
-        print(f"Scanning hashtag: {tag}")
-
-        for post in get_hashtag_posts(client, tag):
-            if total >= MAX_PER_RUN:
-                break
-            if post.author.did in excluded:
+        elif source_type == "feed":
+            url = source["url"].strip()
+            if not url:
                 continue
-            if repost_and_like(client, post, state, per_user):
-                total += 1
-                save_state(state)
 
-    print(f"Done. Total reposted: {total}")
+            print(f"Scanning feed: {source['name']}")
+
+            for post in get_feed_posts(client, url):
+                if total >= OTHER_REPOST_LIMIT:
+                    break
+                if post.author.did in excluded_global:
+                    continue
+                if not is_recent(post):
+                    continue
+                if is_reply(post) and not source.get("allow_replies", True):
+                    continue
+
+                if repost_and_like(client, post, state, per_user):
+                    total += 1
+                    save_state(state)
+
+        elif source_type == "list":
+            url = source["url"].strip()
+            if not url:
+                continue
+
+            print(f"Scanning list: {source['name']}")
+
+            for post in get_list_posts(client, url):
+                if total >= OTHER_REPOST_LIMIT:
+                    break
+                if post.author.did in excluded_global:
+                    continue
+                if not is_recent(post):
+                    continue
+
+                if repost_and_like(client, post, state, per_user):
+                    total += 1
+                    save_state(state)
+
+    repost_own_latest_media(client)
+
+    print(f"Done. Other reposts: {total}, own repost slots: {OWN_REPOST_SLOTS}")
 
 
 if __name__ == "__main__":
