@@ -12,7 +12,7 @@ SLEEP_SECONDS = float(os.getenv("SLEEP_SECONDS", "1.5"))
 
 # Vul hier je 3 feeds in
 FEEDS = [
-    {"name": "feed1", "https://bsky.app/profile/did:plc:jaka644beit3x4vmmg6yysw7/feed/aaae6jfc5w2oi": "", "allow_replies": True},
+    {"name": "feed1", "url": "https://bsky.app/profile/did:plc:jaka644beit3x4vmmg6yysw7/feed/aaae6jfc5w2oi", "allow_replies": True},
     {"name": "feed2", "url": "", "allow_replies": True},
     {"name": "feed3", "url": "", "allow_replies": True},
 ]
