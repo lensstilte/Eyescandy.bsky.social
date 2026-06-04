@@ -20,11 +20,11 @@ OTHER_REPOST_LIMIT = MAX_PER_RUN - OWN_REPOST_SLOTS  # 97
 FEEDS = [
     {"name": "lijst", "url": ""},
     {"name": "redfox", "url": "https://bsky.app/profile/did:plc:jaka644beit3x4vmmg6yysw7/feed/aaae6jfc5w2oi"},
-    {"name": "my accounts", "url": "https://bsky.app/profile/did:plc:sp54ouue6fp2dlvn2cux54ka/feed/aaaji5emthgtg"},
+    {"name": "feed", "url": ""},
 ]
 
 LISTS = [
-    {"name": "lijst", "url": ""},
+    {"name": "eigen", "url": "https://bsky.app/profile/did:plc:sp54ouue6fp2dlvn2cux54ka/lists/3mnib6r6cwk2q"},
     {"name": "repost always", "url": "https://bsky.app/profile/did:plc:sp54ouue6fp2dlvn2cux54ka/lists/3mncvshsuhi2d"},
     {"name": "", "url": ""},
 ]
@@ -395,14 +395,14 @@ def main():
         ("hashtag", HASHTAGS[1]),
         ("hashtag", HASHTAGS[2]),
 
-        ("feed", FEEDS[0]),
+        ("feed", FEEDS[2]),
         ("list", LISTS[2]),
 
         ("feed", FEEDS[1]),
         ("list", LISTS[1]),
 
         ("feed", FEEDS[0]),
-        ("list", LISTS[2]),
+        ("list", LISTS[0]),
     ]
 
     for source_type, source in PROCESS_ORDER:
