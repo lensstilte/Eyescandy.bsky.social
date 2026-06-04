@@ -12,8 +12,8 @@ MAX_PER_USER = int(os.getenv("MAX_PER_USER", "3"))
 SLEEP_SECONDS = float(os.getenv("SLEEP_SECONDS", "1.5"))
 HOURS_BACK = int(os.getenv("HOURS_BACK", "3"))
 
-OWN_REPOST_SLOTS = 2
-OTHER_REPOST_LIMIT = MAX_PER_RUN - OWN_REPOST_SLOTS
+OWN_REPOST_SLOTS = 3
+OTHER_REPOST_LIMIT = MAX_PER_RUN - OWN_REPOST_SLOTS  # 97
 
 FEEDS = [
     {"name": "redfox", "url": "https://bsky.app/profile/did:plc:jaka644beit3x4vmmg6yysw7/feed/aaae6jfc5w2oi", "allow_replies": True},
@@ -123,7 +123,12 @@ def get_feed_posts(client, feed_url):
     rkey = get_rkey(feed_url)
     did = resolve_actor(client, actor)
     feed_uri = f"at://{did}/app.bsky.feed.generator/{rkey}"
-    data = client.app.bsky.feed.get_feed({"feed": feed_uri, "limit": 100})
+
+    data = client.app.bsky.feed.get_feed({
+        "feed": feed_uri,
+        "limit": 100
+    })
+
     return [item.post for item in data.feed]
 
 
@@ -162,7 +167,16 @@ def get_list_posts(client, list_url):
                 "limit": 20,
                 "filter": "posts_no_replies"
             })
-            posts.extend([item.post for item in data.feed])
+
+            for item in data.feed:
+                post = item.post
+
+                # Lijsten: NOOIT replies
+                if is_reply(post):
+                    continue
+
+                posts.append(post)
+
         except Exception as e:
             print(f"Author scan error: {e}")
 
@@ -223,6 +237,8 @@ def repost_own_latest_media(client):
 
             if post.author.did != my_did:
                 continue
+            if is_reply(post):
+                continue
             if not has_media(post):
                 continue
 
@@ -231,6 +247,8 @@ def repost_own_latest_media(client):
             if len(own_media) >= OWN_REPOST_SLOTS:
                 break
 
+        # Oudste van deze 3 eerst, nieuwste als allerlaatste.
+        # Daardoor staat je nieuwste eigen post bovenaan.
         for post in reversed(own_media):
             try:
                 viewer = getattr(post, "viewer", None)
@@ -261,6 +279,8 @@ def main():
     client = Client()
     client.login(USERNAME, PASSWORD)
 
+    my_did = client.me.did
+
     state = load_state()
     per_user = defaultdict(int)
     total = 0
@@ -271,6 +291,8 @@ def main():
             excluded_global.update(get_excluded_dids(client, exclude_url))
 
     print(f"Global excluded accounts: {len(excluded_global)}")
+    print(f"Normal repost limit: {OTHER_REPOST_LIMIT}")
+    print(f"Own repost slots last: {OWN_REPOST_SLOTS}")
 
     PROCESS_ORDER = [
         ("hashtag", HASHTAGS[0]),
@@ -303,11 +325,15 @@ def main():
             for post in get_hashtag_posts(client, tag):
                 if total >= OTHER_REPOST_LIMIT:
                     break
+                if post.author.did == my_did:
+                    continue
                 if post.author.did in excluded_global:
                     continue
                 if post.author.did in excluded:
                     continue
                 if not is_recent(post):
+                    continue
+                if is_reply(post):
                     continue
 
                 if repost_and_like(client, post, state, per_user):
@@ -324,10 +350,14 @@ def main():
             for post in get_feed_posts(client, url):
                 if total >= OTHER_REPOST_LIMIT:
                     break
+                if post.author.did == my_did:
+                    continue
                 if post.author.did in excluded_global:
                     continue
                 if not is_recent(post):
                     continue
+
+                # Feeds: replies mogen, tenzij allow_replies False is
                 if is_reply(post) and not source.get("allow_replies", True):
                     continue
 
@@ -345,15 +375,22 @@ def main():
             for post in get_list_posts(client, url):
                 if total >= OTHER_REPOST_LIMIT:
                     break
+                if post.author.did == my_did:
+                    continue
                 if post.author.did in excluded_global:
                     continue
                 if not is_recent(post):
+                    continue
+
+                # Lijsten: NOOIT replies
+                if is_reply(post):
                     continue
 
                 if repost_and_like(client, post, state, per_user):
                     total += 1
                     save_state(state)
 
+    # Altijd pas NA de 97 normale reposts
     repost_own_latest_media(client)
 
     print(f"Done. Other reposts: {total}, own repost slots: {OWN_REPOST_SLOTS}")
