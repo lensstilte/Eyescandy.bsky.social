@@ -1,4 +1,6 @@
-import os, json, time
+import os
+import json
+import time
 from collections import defaultdict
 from datetime import datetime, timezone, timedelta
 from atproto import Client
@@ -16,9 +18,9 @@ OWN_REPOST_SLOTS = 3
 OTHER_REPOST_LIMIT = MAX_PER_RUN - OWN_REPOST_SLOTS  # 97
 
 FEEDS = [
-    {"name": "redfox", "url": "https://bsky.app/profile/did:plc:jaka644beit3x4vmmg6yysw7/feed/aaae6jfc5w2oi", "allow_replies": True},
-    {"name": "feed2", "url": "", "allow_replies": True},
-    {"name": "feed3", "url": "", "allow_replies": True},
+    {"name": "redfox", "url": "https://bsky.app/profile/did:plc:jaka644beit3x4vmmg6yysw7/feed/aaae6jfc5w2oi"},
+    {"name": "feed2", "url": ""},
+    {"name": "feed3", "url": ""},
 ]
 
 LISTS = [
@@ -42,12 +44,23 @@ GLOBAL_EXCLUDE_LISTS = [
 def load_state():
     if not os.path.exists(STATE_FILE):
         return {"reposted": []}
-    with open(STATE_FILE, "r", encoding="utf-8") as f:
-        return json.load(f)
+
+    try:
+        with open(STATE_FILE, "r", encoding="utf-8") as f:
+            state = json.load(f)
+
+        if "reposted" not in state:
+            state["reposted"] = []
+
+        return state
+
+    except Exception:
+        return {"reposted": []}
 
 
 def save_state(state):
     state["reposted"] = list(dict.fromkeys(state["reposted"]))[-10000:]
+
     with open(STATE_FILE, "w", encoding="utf-8") as f:
         json.dump(state, f, indent=2)
 
@@ -64,13 +77,17 @@ def get_actor_from_url(url):
 def resolve_actor(client, actor):
     if actor.startswith("did:"):
         return actor
-    return client.com.atproto.identity.resolve_handle({"handle": actor}).did
+
+    return client.com.atproto.identity.resolve_handle({
+        "handle": actor
+    }).did
 
 
 def has_media(post):
     embed = getattr(post.record, "embed", None)
     if not embed:
         return False
+
     text = str(embed).lower()
     return "images" in text or "video" in text
 
@@ -79,11 +96,38 @@ def is_reply(post):
     return bool(getattr(post.record, "reply", None))
 
 
+def is_quote(post):
+    embed = getattr(post.record, "embed", None)
+    if not embed:
+        return False
+
+    text = str(embed).lower()
+    return "app.bsky.embed.record" in text or "recordwithmedia" in text
+
+
+def is_repost_item(item):
+    return getattr(item, "reason", None) is not None
+
+
+def is_valid_media_post(post):
+    if not has_media(post):
+        return False
+    if is_reply(post):
+        return False
+    if is_quote(post):
+        return False
+
+    return True
+
+
 def is_recent(post):
     try:
-        created = datetime.fromisoformat(post.record.created_at.replace("Z", "+00:00"))
+        created = datetime.fromisoformat(
+            post.record.created_at.replace("Z", "+00:00")
+        )
         cutoff = datetime.now(timezone.utc) - timedelta(hours=HOURS_BACK)
         return created >= cutoff
+
     except Exception:
         return False
 
@@ -95,9 +139,11 @@ def repost_and_like(client, post, state, per_user):
 
     if uri in state["reposted"]:
         return False
+
     if per_user[author] >= MAX_PER_USER:
         return False
-    if not has_media(post):
+
+    if not is_valid_media_post(post):
         return False
 
     try:
@@ -113,6 +159,7 @@ def repost_and_like(client, post, state, per_user):
         print(f"Reposted: {post.author.handle} - {uri}")
         time.sleep(SLEEP_SECONDS)
         return True
+
     except Exception as e:
         print(f"Repost error: {e}")
         return False
@@ -122,6 +169,7 @@ def get_feed_posts(client, feed_url):
     actor = get_actor_from_url(feed_url)
     rkey = get_rkey(feed_url)
     did = resolve_actor(client, actor)
+
     feed_uri = f"at://{did}/app.bsky.feed.generator/{rkey}"
 
     data = client.app.bsky.feed.get_feed({
@@ -129,20 +177,38 @@ def get_feed_posts(client, feed_url):
         "limit": 100
     })
 
-    return [item.post for item in data.feed]
+    posts = []
+
+    for item in data.feed:
+        if is_repost_item(item):
+            continue
+
+        post = item.post
+
+        if not is_valid_media_post(post):
+            continue
+
+        posts.append(post)
+
+    return posts
 
 
 def get_list_members(client, list_url):
     actor = get_actor_from_url(list_url)
     rkey = get_rkey(list_url)
     did = resolve_actor(client, actor)
+
     list_uri = f"at://{did}/app.bsky.graph.list/{rkey}"
 
     members = []
     cursor = None
 
     while True:
-        params = {"list": list_uri, "limit": 100}
+        params = {
+            "list": list_uri,
+            "limit": 100
+        }
+
         if cursor:
             params["cursor"] = cursor
 
@@ -164,15 +230,17 @@ def get_list_posts(client, list_url):
         try:
             data = client.app.bsky.feed.get_author_feed({
                 "actor": did,
-                "limit": 20,
-                "filter": "posts_no_replies"
+                "limit": 30,
+                "filter": "posts_with_replies"
             })
 
             for item in data.feed:
+                if is_repost_item(item):
+                    continue
+
                 post = item.post
 
-                # Lijsten: NOOIT replies
-                if is_reply(post):
+                if not is_valid_media_post(post):
                     continue
 
                 posts.append(post)
@@ -186,8 +254,10 @@ def get_list_posts(client, list_url):
 def get_excluded_dids(client, list_url):
     if not list_url.strip():
         return set()
+
     try:
         return set(get_list_members(client, list_url))
+
     except Exception as e:
         print(f"Exclude list error: {e}")
         return set()
@@ -211,8 +281,13 @@ def get_hashtag_posts(client, tag):
 
     for post in data.posts:
         text = getattr(post.record, "text", "") or ""
+
         if f"#{clean_tag}" not in text.lower():
             continue
+
+        if not is_valid_media_post(post):
+            continue
+
         posts.append(post)
 
     return posts
@@ -226,20 +301,22 @@ def repost_own_latest_media(client):
 
         data = client.app.bsky.feed.get_author_feed({
             "actor": my_did,
-            "limit": 50,
-            "filter": "posts_no_replies"
+            "limit": 100,
+            "filter": "posts_with_replies"
         })
 
         own_media = []
 
         for item in data.feed:
+            if is_repost_item(item):
+                continue
+
             post = item.post
 
             if post.author.did != my_did:
                 continue
-            if is_reply(post):
-                continue
-            if not has_media(post):
+
+            if not is_valid_media_post(post):
                 continue
 
             own_media.append(post)
@@ -247,8 +324,10 @@ def repost_own_latest_media(client):
             if len(own_media) >= OWN_REPOST_SLOTS:
                 break
 
+        print(f"Own media posts found: {len(own_media)}")
+
         # Oudste van deze 3 eerst, nieuwste als allerlaatste.
-        # Daardoor staat je nieuwste eigen post bovenaan.
+        # Daardoor komt je nieuwste eigen post bovenaan.
         for post in reversed(own_media):
             try:
                 viewer = getattr(post, "viewer", None)
@@ -262,8 +341,10 @@ def repost_own_latest_media(client):
                     except Exception as e:
                         print(f"Delete own repost skipped/error: {e}")
 
+                time.sleep(SLEEP_SECONDS)
+
                 client.repost(post.uri, post.cid)
-                print(f"Own post reposted last: {post.uri}")
+                print(f"Own post reposted on top: {post.uri}")
                 time.sleep(SLEEP_SECONDS)
 
             except Exception as e:
@@ -286,6 +367,7 @@ def main():
     total = 0
 
     excluded_global = set()
+
     for exclude_url in GLOBAL_EXCLUDE_LISTS:
         if exclude_url.strip():
             excluded_global.update(get_excluded_dids(client, exclude_url))
@@ -325,20 +407,24 @@ def main():
             for post in get_hashtag_posts(client, tag):
                 if total >= OTHER_REPOST_LIMIT:
                     break
+
                 if post.author.did == my_did:
                     continue
+
                 if post.author.did in excluded_global:
                     continue
+
                 if post.author.did in excluded:
                     continue
+
                 if not is_recent(post):
                     continue
-                if is_reply(post):
+
+                if not repost_and_like(client, post, state, per_user):
                     continue
 
-                if repost_and_like(client, post, state, per_user):
-                    total += 1
-                    save_state(state)
+                total += 1
+                save_state(state)
 
         elif source_type == "feed":
             url = source["url"].strip()
@@ -350,20 +436,21 @@ def main():
             for post in get_feed_posts(client, url):
                 if total >= OTHER_REPOST_LIMIT:
                     break
+
                 if post.author.did == my_did:
                     continue
+
                 if post.author.did in excluded_global:
                     continue
+
                 if not is_recent(post):
                     continue
 
-                # Feeds: replies mogen, tenzij allow_replies False is
-                if is_reply(post) and not source.get("allow_replies", True):
+                if not repost_and_like(client, post, state, per_user):
                     continue
 
-                if repost_and_like(client, post, state, per_user):
-                    total += 1
-                    save_state(state)
+                total += 1
+                save_state(state)
 
         elif source_type == "list":
             url = source["url"].strip()
@@ -375,22 +462,24 @@ def main():
             for post in get_list_posts(client, url):
                 if total >= OTHER_REPOST_LIMIT:
                     break
+
                 if post.author.did == my_did:
                     continue
+
                 if post.author.did in excluded_global:
                     continue
+
                 if not is_recent(post):
                     continue
 
-                # Lijsten: NOOIT replies
-                if is_reply(post):
+                if not repost_and_like(client, post, state, per_user):
                     continue
 
-                if repost_and_like(client, post, state, per_user):
-                    total += 1
-                    save_state(state)
+                total += 1
+                save_state(state)
 
-    # Altijd pas NA de 97 normale reposts
+    # Altijd als laatste, zodat jouw eigen 3 mediaposts weer bovenaan komen.
+    # Deze eigen posts tellen NIET mee in HOURS_BACK.
     repost_own_latest_media(client)
 
     print(f"Done. Other reposts: {total}, own repost slots: {OWN_REPOST_SLOTS}")
