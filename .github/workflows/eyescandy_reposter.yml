@@ -2,7 +2,7 @@ name: EyesCandy Reposter
 
 on:
   schedule:
-    - cron: "41 * * * *"
+    - cron: "57 * * * *"
   workflow_dispatch:
 
 permissions:
