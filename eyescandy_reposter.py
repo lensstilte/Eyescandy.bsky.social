@@ -83,6 +83,19 @@ def resolve_actor(client, actor):
     }).did
 
 
+def get_created_at(post):
+    try:
+        return datetime.fromisoformat(
+            post.record.created_at.replace("Z", "+00:00")
+        )
+    except Exception:
+        return datetime.min.replace(tzinfo=timezone.utc)
+
+
+def sort_old_to_new(posts):
+    return sorted(posts, key=get_created_at)
+
+
 def has_media(post):
     embed = getattr(post.record, "embed", None)
     if not embed:
@@ -122,9 +135,7 @@ def is_valid_media_post(post):
 
 def is_recent(post):
     try:
-        created = datetime.fromisoformat(
-            post.record.created_at.replace("Z", "+00:00")
-        )
+        created = get_created_at(post)
         cutoff = datetime.now(timezone.utc) - timedelta(hours=HOURS_BACK)
         return created >= cutoff
 
@@ -190,7 +201,7 @@ def get_feed_posts(client, feed_url):
 
         posts.append(post)
 
-    return posts
+    return sort_old_to_new(posts)
 
 
 def get_list_members(client, list_url):
@@ -248,7 +259,7 @@ def get_list_posts(client, list_url):
         except Exception as e:
             print(f"Author scan error: {e}")
 
-    return posts
+    return sort_old_to_new(posts)
 
 
 def get_excluded_dids(client, list_url):
@@ -290,7 +301,7 @@ def get_hashtag_posts(client, tag):
 
         posts.append(post)
 
-    return posts
+    return sort_old_to_new(posts)
 
 
 def repost_own_latest_media(client):
@@ -324,11 +335,13 @@ def repost_own_latest_media(client):
             if len(own_media) >= OWN_REPOST_SLOTS:
                 break
 
+        own_media = sort_old_to_new(own_media)
+
         print(f"Own media posts found: {len(own_media)}")
 
-        # Oudste van deze 3 eerst, nieuwste als allerlaatste.
-        # Daardoor komt je nieuwste eigen post bovenaan.
-        for post in reversed(own_media):
+        # Oudste eerst, nieuwste als laatste.
+        # Daardoor eindigt de nieuwste eigen post bovenaan.
+        for post in own_media:
             try:
                 viewer = getattr(post, "viewer", None)
                 old_repost = getattr(viewer, "repost", None) if viewer else None
@@ -375,6 +388,7 @@ def main():
     print(f"Global excluded accounts: {len(excluded_global)}")
     print(f"Normal repost limit: {OTHER_REPOST_LIMIT}")
     print(f"Own repost slots last: {OWN_REPOST_SLOTS}")
+    print("Post order: old -> new")
 
     PROCESS_ORDER = [
         ("hashtag", HASHTAGS[0]),
@@ -404,7 +418,9 @@ def main():
 
             print(f"Scanning hashtag: {tag}")
 
-            for post in get_hashtag_posts(client, tag):
+            posts = get_hashtag_posts(client, tag)
+
+            for post in posts:
                 if total >= OTHER_REPOST_LIMIT:
                     break
 
@@ -433,7 +449,9 @@ def main():
 
             print(f"Scanning feed: {source['name']}")
 
-            for post in get_feed_posts(client, url):
+            posts = get_feed_posts(client, url)
+
+            for post in posts:
                 if total >= OTHER_REPOST_LIMIT:
                     break
 
@@ -459,7 +477,9 @@ def main():
 
             print(f"Scanning list: {source['name']}")
 
-            for post in get_list_posts(client, url):
+            posts = get_list_posts(client, url)
+
+            for post in posts:
                 if total >= OTHER_REPOST_LIMIT:
                     break
 
@@ -478,8 +498,8 @@ def main():
                 total += 1
                 save_state(state)
 
-    # Altijd als laatste, zodat jouw eigen 3 mediaposts weer bovenaan komen.
-    # Deze eigen posts tellen NIET mee in HOURS_BACK.
+    # Altijd als laatste, hoe oud ook.
+    # Je eigen laatste 3 media posts komen opnieuw bovenaan.
     repost_own_latest_media(client)
 
     print(f"Done. Other reposts: {total}, own repost slots: {OWN_REPOST_SLOTS}")
