@@ -22,6 +22,7 @@ jobs:
       STATE_FILE: state_eyescandy.json
       MAX_PER_RUN: 100
       MAX_PER_USER: 3
+      HOURS_BACK: 3
       SLEEP_SECONDS: 1.5
 
     steps:
@@ -36,13 +37,13 @@ jobs:
       - name: Install dependencies
         run: pip install atproto
 
-      - name: Run repost bot
+      - name: Run EyesCandy repost bot
         run: python eyescandy_reposter.py
 
-      - name: Commit reposted state file
+      - name: Commit state file
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
           git add state_eyescandy.json
-          git commit -m "Update eyescandy reposted state" || echo "No changes"
+          git commit -m "Update EyesCandy repost state" || echo "No changes to commit"
           git push
