@@ -4,11 +4,14 @@ import time
 from datetime import datetime, timezone, timedelta
 from atproto import Client
 
+# Target creator
 TARGET_ACCOUNT = "big-dominio.bsky.social"
+
+# Your own account, always boosted last
 OWN_ACCOUNT = "eyescandy.bsky.social"
 
-RANDOM_POSTS = 5
-NEWEST_POSTS = 5
+RANDOM_POSTS = 10
+NEWEST_POSTS = 10
 OWN_POSTS = 3
 LOOKBACK_DAYS = 60
 SLEEP_SECONDS = 2
@@ -20,16 +23,24 @@ client = Client()
 
 
 def get_created_at(item):
-    return datetime.fromisoformat(item.post.record.created_at.replace("Z", "+00:00"))
+    return datetime.fromisoformat(
+        item.post.record.created_at.replace("Z", "+00:00")
+    )
 
 
 def has_media(item):
-    return getattr(item.post.record, "embed", None) is not None
+    embed = getattr(item.post.record, "embed", None)
+    return embed is not None
 
 
 def is_quote(item):
     embed = getattr(item.post.record, "embed", None)
     return embed and "record" in str(type(embed)).lower()
+
+
+def is_repost_from_feed(item):
+    # Blocks reposts shown in the author's feed
+    return getattr(item, "reason", None) is not None
 
 
 def get_media_posts(account, limit=100, days_back=None):
@@ -45,9 +56,15 @@ def get_media_posts(account, limit=100, days_back=None):
         cutoff = datetime.now(timezone.utc) - timedelta(days=days_back)
 
     for item in feed.feed:
+        # Only real content from this account, no reposts
+        if is_repost_from_feed(item):
+            continue
+
+        # Media required
         if not has_media(item):
             continue
 
+        # No quote posts
         if is_quote(item):
             continue
 
@@ -58,6 +75,7 @@ def get_media_posts(account, limit=100, days_back=None):
 
         posts.append(item)
 
+    # Newest first
     posts.sort(key=get_created_at, reverse=True)
     return posts
 
@@ -102,12 +120,21 @@ def main():
         days_back=None
     )[:OWN_POSTS]
 
-    final_posts = random_posts + newest_posts + own_posts
-
-    print(f"Random old posts: {len(random_posts)}")
+    print(f"Random old target posts: {len(random_posts)}")
     print(f"Newest target posts: {len(newest_posts)}")
     print(f"Own Eyescandy posts: {len(own_posts)}")
-    print(f"Total actions: {len(final_posts)}")
+
+    # Belangrijk:
+    # Laatste repost komt bovenaan.
+    # Daarom Eyescandy als laatste groep.
+    # En binnen Eyescandy: oudste eerst, nieuwste als allerlaatste.
+    final_posts = (
+        random_posts
+        + list(reversed(newest_posts))
+        + list(reversed(own_posts))
+    )
+
+    print(f"Total repost actions: {len(final_posts)}")
 
     for item in final_posts:
         refresh_repost(item)
