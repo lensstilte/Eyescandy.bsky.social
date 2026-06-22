@@ -4,17 +4,18 @@ import time
 from datetime import datetime, timezone, timedelta
 from atproto import Client
 
-# Target creator
 TARGET_ACCOUNT = "big-dominio.bsky.social"
-
-# Your own account, always boosted last
 OWN_ACCOUNT = "eyescandy.bsky.social"
 
 RANDOM_POSTS = 5
 NEWEST_POSTS = 5
 OWN_POSTS = 3
+
 LOOKBACK_DAYS = 60
 SLEEP_SECONDS = 2
+
+TARGET_MAX_PAGES = 10
+OWN_MAX_PAGES = 20
 
 USERNAME = os.getenv("BSKY_USERNAME")
 PASSWORD = os.getenv("BSKY_PASSWORD")
@@ -29,8 +30,7 @@ def get_created_at(item):
 
 
 def has_media(item):
-    embed = getattr(item.post.record, "embed", None)
-    return embed is not None
+    return getattr(item.post.record, "embed", None) is not None
 
 
 def is_quote(item):
@@ -39,43 +39,60 @@ def is_quote(item):
 
 
 def is_repost_from_feed(item):
-    # Blocks reposts shown in the author's feed
     return getattr(item, "reason", None) is not None
 
 
-def get_media_posts(account, limit=100, days_back=None):
-    feed = client.app.bsky.feed.get_author_feed({
-        "actor": account,
-        "limit": limit
-    })
-
+def get_media_posts(account, wanted=20, days_back=None, max_pages=10):
     posts = []
+    cursor = None
     cutoff = None
 
     if days_back:
         cutoff = datetime.now(timezone.utc) - timedelta(days=days_back)
 
-    for item in feed.feed:
-        # Only real content from this account, no reposts
-        if is_repost_from_feed(item):
-            continue
+    for page in range(max_pages):
+        params = {
+            "actor": account,
+            "limit": 100
+        }
 
-        # Media required
-        if not has_media(item):
-            continue
+        if cursor:
+            params["cursor"] = cursor
 
-        # No quote posts
-        if is_quote(item):
-            continue
+        feed = client.app.bsky.feed.get_author_feed(params)
 
-        created = get_created_at(item)
+        for item in feed.feed:
+            # Alleen echte content van dit account
+            # Geen reposts van anderen uit de profiel-feed
+            if is_repost_from_feed(item):
+                continue
 
-        if cutoff and created < cutoff:
-            continue
+            # Alleen media
+            if not has_media(item):
+                continue
 
-        posts.append(item)
+            # Geen quote posts
+            if is_quote(item):
+                continue
 
-    # Newest first
+            created = get_created_at(item)
+
+            if cutoff and created < cutoff:
+                continue
+
+            posts.append(item)
+
+            if len(posts) >= wanted:
+                break
+
+        if len(posts) >= wanted:
+            break
+
+        cursor = getattr(feed, "cursor", None)
+
+        if not cursor:
+            break
+
     posts.sort(key=get_created_at, reverse=True)
     return posts
 
@@ -102,8 +119,9 @@ def main():
 
     target_posts = get_media_posts(
         TARGET_ACCOUNT,
-        limit=100,
-        days_back=LOOKBACK_DAYS
+        wanted=60,
+        days_back=LOOKBACK_DAYS,
+        max_pages=TARGET_MAX_PAGES
     )
 
     newest_posts = target_posts[:NEWEST_POSTS]
@@ -116,18 +134,22 @@ def main():
 
     own_posts = get_media_posts(
         OWN_ACCOUNT,
-        limit=30,
-        days_back=None
+        wanted=OWN_POSTS,
+        days_back=None,
+        max_pages=OWN_MAX_PAGES
     )[:OWN_POSTS]
 
+    print(f"Target found media posts: {len(target_posts)}")
     print(f"Random old target posts: {len(random_posts)}")
     print(f"Newest target posts: {len(newest_posts)}")
     print(f"Own Eyescandy posts: {len(own_posts)}")
 
-    # Belangrijk:
     # Laatste repost komt bovenaan.
-    # Daarom Eyescandy als laatste groep.
-    # En binnen Eyescandy: oudste eerst, nieuwste als allerlaatste.
+    # Daarom:
+    # 1. random target
+    # 2. nieuwste target, oudste eerst
+    # 3. eigen Eyescandy posts, oudste eerst
+    # Daardoor komt nieuwste Eyescandy helemaal bovenaan.
     final_posts = (
         random_posts
         + list(reversed(newest_posts))
