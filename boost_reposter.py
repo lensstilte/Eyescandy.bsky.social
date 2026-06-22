@@ -10,8 +10,8 @@ TARGET_ACCOUNT = "big-dominio.bsky.social"
 # Your own account, always boosted last
 OWN_ACCOUNT = "eyescandy.bsky.social"
 
-RANDOM_POSTS = 10
-NEWEST_POSTS = 10
+RANDOM_POSTS = 5
+NEWEST_POSTS = 5
 OWN_POSTS = 3
 LOOKBACK_DAYS = 60
 SLEEP_SECONDS = 2
