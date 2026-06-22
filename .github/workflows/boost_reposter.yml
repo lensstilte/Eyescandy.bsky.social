@@ -1,1 +1,24 @@
+name: Eyescandy Boost Reposter
 
+on:
+  workflow_dispatch:
+
+jobs:
+  boost:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install atproto
+
+      - name: Run boost bot
+        env:
+          BSKY_USERNAME: ${{ secrets.BSKY_USERNAME }}
+          BSKY_PASSWORD: ${{ secrets.BSKY_PASSWORD }}
+        run: python boost_reposter.py
