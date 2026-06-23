@@ -7,8 +7,8 @@ from atproto import Client
 TARGET_ACCOUNT = "big-dominio.bsky.social"
 OWN_ACCOUNT = "eyescandy.bsky.social"
 
-RANDOM_POSTS = 5
-NEWEST_POSTS = 5
+RANDOM_POSTS = 10
+NEWEST_POSTS = 10
 OWN_POSTS = 3
 
 LOOKBACK_DAYS = 60
@@ -38,6 +38,10 @@ def is_quote(item):
     return embed and "record" in str(type(embed)).lower()
 
 
+def is_reply(item):
+    return getattr(item.post.record, "reply", None) is not None
+
+
 def is_repost_from_feed(item):
     return getattr(item, "reason", None) is not None
 
@@ -62,9 +66,12 @@ def get_media_posts(account, wanted=20, days_back=None, max_pages=10):
         feed = client.app.bsky.feed.get_author_feed(params)
 
         for item in feed.feed:
-            # Alleen echte content van dit account
-            # Geen reposts van anderen uit de profiel-feed
+            # Geen reposts van anderen
             if is_repost_from_feed(item):
+                continue
+
+            # Geen replies
+            if is_reply(item):
                 continue
 
             # Alleen media
@@ -99,6 +106,17 @@ def get_media_posts(account, wanted=20, days_back=None, max_pages=10):
 
 def refresh_repost(item):
     viewer = item.post.viewer
+
+    like_uri = getattr(viewer, "like", None)
+
+    if not like_uri:
+        try:
+            print("Like:", item.post.uri)
+            client.like(item.post.uri, item.post.cid)
+            time.sleep(1)
+        except Exception as e:
+            print("Like failed:", e)
+
     repost_uri = getattr(viewer, "repost", None)
 
     if repost_uri:
@@ -144,12 +162,6 @@ def main():
     print(f"Newest target posts: {len(newest_posts)}")
     print(f"Own Eyescandy posts: {len(own_posts)}")
 
-    # Laatste repost komt bovenaan.
-    # Daarom:
-    # 1. random target
-    # 2. nieuwste target, oudste eerst
-    # 3. eigen Eyescandy posts, oudste eerst
-    # Daardoor komt nieuwste Eyescandy helemaal bovenaan.
     final_posts = (
         random_posts
         + list(reversed(newest_posts))
