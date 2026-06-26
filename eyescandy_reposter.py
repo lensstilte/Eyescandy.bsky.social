@@ -31,7 +31,7 @@ LISTS = [
 
 HASHTAGS = [
     {"tag": "#eyescandy", "exclude_list": "https://bsky.app/profile/did:plc:sp54ouue6fp2dlvn2cux54ka/lists/3mnianivya72q"},
-    {"tag": "#bskypromo", "exclude_list": "https://bsky.app/profile/did:plc:sp54ouue6fp2dlvn2cux54ka/lists/3mniamoz32f2n"},
+    {"tag": "", "exclude_list": "https://bsky.app/profile/did:plc:sp54ouue6fp2dlvn2cux54ka/lists/3mniamoz32f2n"},
     {"tag": "", "exclude_list": ""},
 ]
 
