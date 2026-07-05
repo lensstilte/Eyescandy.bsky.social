@@ -1,0 +1,34 @@
+name: EyesCandy 5Post Booster
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: eyescandy-5post-booster
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+
+    env:
+      BSKY_USERNAME: ${{ secrets.BSKY_USERNAME_EYESCANDY }}
+      BSKY_PASSWORD: ${{ secrets.BSKY_PASSWORD_EYESCANDY }}
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install atproto
+
+      - name: Run 5Post Booster
+        run: python 5post_booster.py
