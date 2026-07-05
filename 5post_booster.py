@@ -16,14 +16,10 @@ BOOST_POSTS = [
 
 def parse_bsky_url(url):
     match = re.search(r"bsky\.app/profile/([^/]+)/post/([^/?#]+)", url)
-
     if not match:
         raise ValueError(f"Ongeldige Bluesky URL: {url}")
 
-    handle = match.group(1)
-    post_id = match.group(2)
-
-    return handle, post_id
+    return match.group(1), match.group(2)
 
 
 def main():
@@ -53,6 +49,12 @@ def main():
 
             post_uri = f"at://{did}/app.bsky.feed.post/{post_id}"
 
+            thread = client.get_post_thread(post_uri)
+            post = thread.thread.post
+
+            post_uri = post.uri
+            post_cid = post.cid
+
             print(f"Boost post: {url}")
 
             try:
@@ -62,7 +64,7 @@ def main():
             except Exception:
                 print("Geen oude repost gevonden.")
 
-            client.repost(post_uri)
+            client.repost(post_uri, post_cid)
             print("Opnieuw gerepost.")
 
             time.sleep(2)
