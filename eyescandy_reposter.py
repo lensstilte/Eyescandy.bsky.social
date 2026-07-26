@@ -31,7 +31,7 @@ FEEDS = [
     {
         "name": "redfox",
         "url": "https://bsky.app/profile/did:plc:jaka644beit3x4vmmg6yysw7/feed/aaae6jfc5w2oi",
-        "allow_replies": true,
+        "allow_replies": True,
     },
     {
         "name": "feed",
