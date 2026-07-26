@@ -25,13 +25,13 @@ OTHER_REPOST_LIMIT = max(0, MAX_PER_RUN - OWN_REPOST_SLOTS)
 FEEDS = [
     {
         "name": "lijst",
-        "url": "https://bsky.app/profile/did:plc:jaka644beit3x4vmmg6yysw7/feed/aaae6jfc5w2oi",
+        "url": https://bsky.app/profile/did:plc:sp54ouue6fp2dlvn2cux54ka/feed/aaaia4sxjd6ts",
         "allow_replies": True,
     },
     {
         "name": "redfox",
         "url": "https://bsky.app/profile/did:plc:jaka644beit3x4vmmg6yysw7/feed/aaae6jfc5w2oi",
-        "allow_replies": False,
+        "allow_replies": true,
     },
     {
         "name": "feed",
