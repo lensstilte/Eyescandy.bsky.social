@@ -10,7 +10,7 @@ from atproto import Client
 # ACCOUNTS
 # ============================================================
 
-OWN_ACCOUNT = "dmphotos.bsky.social"
+OWN_ACCOUNT = "eyescandy.bsky.social"
 
 # Maximaal 5 targetaccounts.
 # Laat een regel leeg om die positie over te slaan.
