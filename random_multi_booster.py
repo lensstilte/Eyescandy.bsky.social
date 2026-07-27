@@ -33,7 +33,7 @@ NEWEST_POSTS_PER_TARGET = 1
 RANDOM_OLD_POSTS_PER_TARGET = 2
 
 # Aantal eigen posts dat als laatste wordt vernieuwd
-OWN_POSTS = 3
+OWN_POSTS = 1
 
 # Hoe ver terugkijken bij de targetaccounts
 LOOKBACK_DAYS = 3650
