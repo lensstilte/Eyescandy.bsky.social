@@ -23,7 +23,7 @@ jobs:
 
       - name: Run Random Multi Booster
         env:
-          BSKY_USERNAME: ${{ secrets.BSKY_USERNAME }}
-          BSKY_PASSWORD: ${{ secrets.BSKY_PASSWORD }}
+          BSKY_USERNAME: ${{ secrets.BSKY_USERNAME_EYESCANDY }}
+          BSKY_PASSWORD: ${{ secrets.BSKY_PASSWORD_EYESCANDY }}
         run: |
           python random_multi_booster.py
