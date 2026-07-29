@@ -8,7 +8,7 @@ TARGET_ACCOUNT = "big-dominio.bsky.social"
 OWN_ACCOUNT = "eyescandy.bsky.social"
 
 RANDOM_POSTS = 0
-NEWEST_POSTS = 3
+NEWEST_POSTS = 1
 OWN_POSTS = 3
 
 LOOKBACK_DAYS = 60
