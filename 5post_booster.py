@@ -6,7 +6,7 @@ import time
 from atproto import Client
 
 BOOST_POSTS = [
-    "https://bsky.app/profile/big-dominio.bsky.social/post/3mryju4b3fk2j",
+    "https://bsky.app/profile/big-dominio.bsky.social/post/3ms34bfz4l22t",
     "https://bsky.app/profile/big-dominio.bsky.social/post/3mgmzf5heas2q",
     "https://bsky.app/profile/tasha510.bsky.social/post/3mposmwmpr22o",
     "https://bsky.app/profile/brithneykissme.bsky.social/post/3mqwf6qigkc2g",
