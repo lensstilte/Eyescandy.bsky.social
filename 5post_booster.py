@@ -9,10 +9,10 @@ BOOST_POSTS = [
     "",
     "",
     "",
-    "",
+    "https://bsky.app/profile/eyescandy.bsky.social/post/3msbhq2sr2227",
     "https://bsky.app/profile/erintease.bsky.social/post/3mpu66ke6kc2h",
     "https://bsky.app/profile/eyescandy.bsky.social/post/3msbtvdys6c2q",
-    "https://bsky.app/profile/eyescandy.bsky.social/post/3msbhq2sr2227",
+    "https://bsky.app/profile/julyakawaii.bsky.social/post/3msbxkne5ps2p",
 
 
 
