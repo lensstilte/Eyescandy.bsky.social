@@ -6,13 +6,13 @@ import time
 from atproto import Client
 
 BOOST_POSTS = [
-    "https://bsky.app/profile/roxyontherox.bsky.social/post/3ms2ce4gn3c2z",
-    "https://bsky.app/profile/tullageback.bsky.social/post/3ms3pit3kr42c",
-    "https://bsky.app/profile/kaorianya.bsky.social/post/3ms43qkekjm2f",
-    "https://bsky.app/profile/brithneykissme.bsky.social/post/3mqwf6qigkc2g",
-    "https://bsky.app/profile/thepriapicknave.bsky.social/post/3ms3jvzqchs2n",
-    "https://bsky.app/profile/lekkerekontjes69.bsky.social/post/3ms45j3immo2v",
-    "https://bsky.app/profile/beautyfan.bsky.social/post/3ms4a2lvhc22d",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "https://bsky.app/profile/eyescandy.bsky.social/post/3msbhq2sr2227",
 
 
 
