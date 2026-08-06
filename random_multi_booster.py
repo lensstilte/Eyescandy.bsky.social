@@ -29,8 +29,8 @@ TARGET_ACCOUNTS = [
 
 # Voorbeeld:
 # 1 nieuwste post + 2 willekeurige oude posts = 3 reposts per target
-NEWEST_POSTS_PER_TARGET = 1
-RANDOM_OLD_POSTS_PER_TARGET = 2
+NEWEST_POSTS_PER_TARGET = 3
+RANDOM_OLD_POSTS_PER_TARGET = 0
 
 # Aantal eigen posts dat als laatste wordt vernieuwd
 OWN_POSTS = 1
