@@ -2,7 +2,7 @@ import os
 import json
 import time
 from collections import defaultdict
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone, timedelt
 
 from atproto import Client
 
