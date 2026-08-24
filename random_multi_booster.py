@@ -15,9 +15,9 @@ OWN_ACCOUNT = "eyescandy.bsky.social"
 # Maximaal 5 targetaccounts.
 # Laat een regel leeg om die positie over te slaan.
 TARGET_ACCOUNTS = [
-    "melli848.bsky.social",
+    "womenworld.bsky.social",
     "carmenle91.bsky.social",
-    "",
+    "melli848.bsky.social",
     "",
     "",
 ]
