@@ -18,7 +18,7 @@ TARGET_ACCOUNTS = [
     "womenworld.bsky.social",
     "big-dominio.bsky.social",
     "melli848.bsky.social",
-    "",
+    "@mg4mg.bsky.social",
     "",
 ]
 
