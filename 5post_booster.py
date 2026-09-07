@@ -11,9 +11,9 @@ BOOST_POSTS = [
     "",
     "",
     "",
-    "https://bsky.app/profile/julyakawaii.bsky.social/post/3murqk5wvuc2c",
-    "https://bsky.app/profile/luanablack2.bsky.social/post/3muotw33khs2z",
-    "https://bsky.app/profile/big-dominio.bsky.social/post/3munnxjay7x2c",
+    "https://bsky.app/profile/luanablack2.bsky.social/post/3mru4zhdp3c2s",
+    "https://bsky.app/profile/luanablack2.bsky.social/post/3mtt4tcfmv22l",
+    "https://bsky.app/profile/julyakawaii.bsky.social/post/3muuc2tiqg22o",
 
 
 
