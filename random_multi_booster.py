@@ -19,7 +19,7 @@ TARGET_ACCOUNTS = [
     "big-dominio.bsky.social",
     "melli848.bsky.social",
     "@mg4mg.bsky.social",
-    "",
+    "@blackysand.bsky.social",
 ]
 
 
