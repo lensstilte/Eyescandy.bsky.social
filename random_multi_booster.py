@@ -16,10 +16,10 @@ OWN_ACCOUNT = "eyescandy.bsky.social"
 # Laat een regel leeg om die positie over te slaan.
 TARGET_ACCOUNTS = [
     "womenworld.bsky.social",
-    "big-dominio.bsky.social",
+    "blackysand.bsky.social",
     "melli848.bsky.social",
-    "@mg4mg.bsky.social",
-    "@blackysand.bsky.social",
+    "big-dominio.bsky.social",
+    "",
 ]
 
 
