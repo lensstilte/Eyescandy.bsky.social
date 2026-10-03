@@ -8,7 +8,7 @@ from atproto import Client
 BOOST_POSTS = [
     "",
     "",
-    "",
+    "https://bsky.app/profile/beachmilf53.bsky.social/post/3mwwu2bdctc2v",
     "https://bsky.app/profile/rebeckastyles.bsky.social/post/3lfninuu22k2u",
     "https://bsky.app/profile/temptingnikki.bsky.social/post/3ml5kkbbr3k2t",
     "https://bsky.app/profile/luanablack2.bsky.social/post/3mwvbqmgsdk2n",
