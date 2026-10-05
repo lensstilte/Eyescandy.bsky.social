@@ -8,12 +8,12 @@ from atproto import Client
 BOOST_POSTS = [
     "",
     "",
-    "https://bsky.app/profile/beachmilf53.bsky.social/post/3mwwu2bdctc2v",
-    "https://bsky.app/profile/rebeckastyles.bsky.social/post/3lfninuu22k2u",
-    "https://bsky.app/profile/temptingnikki.bsky.social/post/3ml5kkbbr3k2t",
-    "https://bsky.app/profile/luanablack2.bsky.social/post/3mwvbqmgsdk2n",
-    "https://bsky.app/profile/julyakawaii.bsky.social/post/3mfcmcb4nn22f",
-    "https://bsky.app/profile/majordom.bsky.social/post/3mww2iceips2r",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "https://bsky.app/profile/womenworld.bsky.social/post/3mx3mgqi4nu2b",
 
 
 
