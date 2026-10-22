@@ -1,33 +1,86 @@
-name: Saved Posts Test
+# 5post_booster.py
 
-on:
-  workflow_dispatch:
+import os
+import re
+import time
+from atproto import Client
 
-permissions:
-  contents: read
+BOOST_POSTS = [
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "https://bsky.app/profile/redheadheaven.bsky.social/post/3myep2lpnrs2n",
+    "",
 
-jobs:
-  saved-posts-test:
-    runs-on: ubuntu-latest
 
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
 
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install atproto
+]
 
-      - name: Run Saved Posts test
-        env:
-          SAVED_POSTS_USERNAME: ${{ secrets.SAVED_POSTS_USERNAME }}
-          SAVED_POSTS_PASSWORD: ${{ secrets.SAVED_POSTS_PASSWORD }}
-          BSKY_USERNAME: ${{ secrets.BSKY_USERNAME }}
-          BSKY_PASSWORD: ${{ secrets.BSKY_PASSWORD }}
-        run: python saved_posts_test.py
+
+def parse_bsky_url(url):
+    match = re.search(r"bsky\.app/profile/([^/]+)/post/([^/?#]+)", url)
+    if not match:
+        raise ValueError(f"Ongeldige Bluesky URL: {url}")
+
+    return match.group(1), match.group(2)
+
+
+def main():
+    username = os.getenv("BSKY_USERNAME")
+    password = os.getenv("BSKY_PASSWORD")
+
+    if not username or not password:
+        raise RuntimeError("BSKY_USERNAME of BSKY_PASSWORD ontbreekt.")
+
+    client = Client()
+    client.login(username, password)
+
+    print(f"Ingelogd als: {username}")
+
+    active_posts = [url.strip() for url in BOOST_POSTS if url.strip()]
+
+    if not active_posts:
+        print("Geen boost posts ingevuld. Script stopt.")
+        return
+
+    for url in active_posts:
+        try:
+            handle, post_id = parse_bsky_url(url)
+
+            profile = client.get_profile(handle)
+            did = profile.did
+
+            post_uri = f"at://{did}/app.bsky.feed.post/{post_id}"
+
+            thread = client.get_post_thread(post_uri)
+            post = thread.thread.post
+
+            post_uri = post.uri
+            post_cid = post.cid
+
+            print(f"Boost post: {url}")
+
+            try:
+                client.delete_repost(post_uri)
+                print("Oude repost verwijderd.")
+                time.sleep(1)
+            except Exception:
+                print("Geen oude repost gevonden.")
+
+            client.repost(post_uri, post_cid)
+            print("Opnieuw gerepost.")
+
+            time.sleep(2)
+
+        except Exception as e:
+            print(f"Fout bij {url}: {e}")
+
+    print("5post booster klaar.")
+
+
+if __name__ == "__main__":
+    main()
