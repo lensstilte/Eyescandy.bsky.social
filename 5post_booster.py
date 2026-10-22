@@ -10,8 +10,8 @@ BOOST_POSTS = [
     "",
     "",
     "",
-    "https://bsky.app/profile/lavapink69.bsky.social/post/3myfrem3p722s",
-    "https://bsky.app/profile/mel--evans.bsky.social/post/3myfqvjmrcc2l",
+    "",
+    "",
     "https://bsky.app/profile/redheadheaven.bsky.social/post/3myep2lpnrs2n",
     "",
 
