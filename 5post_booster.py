@@ -13,7 +13,7 @@ BOOST_POSTS = [
     "",
     "",
     "https://bsky.app/profile/big-dominio.bsky.social/post/3mzrtlqp63c2z",
-    "https://bsky.app/profile/marc-system70.bsky.social/post/3mzqqlpu3pk2a",
+    "https://bsky.app/profile/alliekat03.bsky.social/post/3mxrrh4nujk2l",
 
 
 
